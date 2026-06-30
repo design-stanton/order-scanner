@@ -7,42 +7,39 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Order Scanner" />
 <title>Order Scanner</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
-  #root { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; }
-  input, textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 15px; font-family: inherit; background: #fff; color: #1d1d1f; outline: none; }
-  input:focus, textarea:focus, select:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
-  textarea { resize: vertical; }
-  button { padding: 10px 16px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: #1d1d1f; cursor: pointer; transition: background 0.12s, transform 0.1s; white-space: nowrap; }
-  button:hover { background: #f5f5f7; }
-  button:active { transform: scale(0.97); }
-  button.primary { background: #0071e3; color: #fff; border-color: #0071e3; font-weight: 500; }
-  button.primary:hover { background: #005bbf; }
-  button.danger { color: #ff3b30; }
-  button.sm { padding: 5px 10px; font-size: 12px; }
-  .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 14px; }
-  .muted { color: #6e6e73; }
-  .tab-bar { display: flex; border-bottom: 1px solid #e5e5ea; }
-  .tab-btn { padding: 10px 16px; font-size: 13px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; color: #6e6e73; font-family: inherit; }
-  .tab-btn.active { border-bottom-color: #1d1d1f; color: #1d1d1f; font-weight: 500; }
-  .cust-tab { padding: 8px 14px; font-size: 12px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; color: #6e6e73; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
-  .cust-tab.active { border-bottom-color: #1d1d1f; color: #1d1d1f; font-weight: 500; }
-  .cust-tab.done { color: #30d158; }
-  pre { font-size: 11px; background: #f5f5f7; border-radius: 8px; padding: 12px; overflow-x: auto; line-height: 1.5; white-space: pre-wrap; }
-  .flash-green { animation: flashg 0.4s ease; }
-  @keyframes flashg { 0%,100%{background:transparent} 50%{background:rgba(48,209,88,0.18)} }
-  .scan-confirm-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 24px; }
-  .scan-confirm { background: #fff; border: 2px solid #0071e3; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-  .confirm-name { font-size: 17px; font-weight: 600; margin-bottom: 4px; text-align: center; }
-  .confirm-detail { font-size: 13px; color: #6e6e73; margin-bottom: 16px; line-height: 1.5; text-align: center; }
-  .confirm-btns { display: flex; gap: 8px; }
-  .confirm-btns button { flex: 1; padding: 12px; font-size: 15px; font-weight: 500; }
-  @media print { .no-print { display: none !important; } }
-</style>
+<style>*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+#root { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; }
+input, textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 15px; font-family: inherit; background: #fff; color: #1d1d1f; outline: none; }
+input:focus, textarea:focus, select:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+textarea { resize: vertical; }
+button { padding: 10px 16px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: #1d1d1f; cursor: pointer; transition: background 0.12s, transform 0.1s; white-space: nowrap; }
+button:hover { background: #f5f5f7; }
+button:active { transform: scale(0.97); }
+button.primary { background: #0071e3; color: #fff; border-color: #0071e3; font-weight: 500; }
+button.primary:hover { background: #005bbf; }
+button.danger { color: #ff3b30; }
+button.sm { padding: 5px 10px; font-size: 12px; }
+.card { background: #fff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 12px 14px; }
+.muted { color: #6e6e73; }
+.tab-bar { display: flex; border-bottom: 1px solid #e5e5ea; }
+.tab-btn { padding: 10px 16px; font-size: 13px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; color: #6e6e73; font-family: inherit; }
+.tab-btn.active { border-bottom-color: #1d1d1f; color: #1d1d1f; font-weight: 500; }
+.cust-tab { padding: 8px 14px; font-size: 12px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; color: #6e6e73; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+.cust-tab.active { border-bottom-color: #1d1d1f; color: #1d1d1f; font-weight: 500; }
+.cust-tab.done { color: #30d158; }
+pre { font-size: 11px; background: #f5f5f7; border-radius: 8px; padding: 12px; overflow-x: auto; line-height: 1.5; white-space: pre-wrap; }
+.flash-green { animation: flashg 0.4s ease; }
+@keyframes flashg { 0%,100%{background:transparent} 50%{background:rgba(48,209,88,0.18)} }
+.scan-confirm-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 24px; }
+.scan-confirm { background: #fff; border: 2px solid #0071e3; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.confirm-name { font-size: 17px; font-weight: 600; margin-bottom: 4px; text-align: center; }
+.confirm-detail { font-size: 13px; color: #6e6e73; margin-bottom: 16px; line-height: 1.5; text-align: center; }
+.confirm-btns { display: flex; gap: 8px; }
+.confirm-btns button { flex: 1; padding: 12px; font-size: 15px; font-weight: 500; }</style>
 </head>
 <body>
-<div id="root"><p style="padding:20px;font-family:sans-serif">Loading app...</p></div>
+<div id="root"><p style="padding:20px;font-family:sans-serif;color:#888">Loading...</p></div>
 <script>/**
  * @license React
  * react.production.min.js
@@ -3184,19 +3181,12 @@ exports.qrToImageData = function qrToImageData (imgData, qr, opts) {
 
 
 
+
 // Hide loading message once React mounts
-window.__clearEarly = function() {
-  const el = document.getElementById('early-msg');
-  if (el) el.remove();
-};
+window.__clearEarly = function() {};
 
 // Report which CDN scripts failed to load
-window.onerror = function(msg, src, line, col, err) {
-  const el = document.getElementById('early-msg');
-  if (el) el.innerHTML = '<b style="color:#c62828">Error:</b> ' + msg + '<br><small>' + src + ' line ' + line + '</small>' +
-    '<br><br><button onclick="localStorage.clear();location.reload()">Clear saved data &amp; reload</button>';
-  return false;
-};
+// onerror removed
 
 const { useState, useRef, useEffect } = React;
 const h = React.createElement;
@@ -3962,16 +3952,12 @@ function AdminPanel({ products, setProducts, sets, setSets, onSave, onSaveSets, 
 // ── Setup Guide ───────────────────────────────────────────────────────────────
 function SetupGuide() {
   const steps = [
-    { title:"1. Host on Netlify (free)", body:"Go to netlify.com/drop and drag this HTML file onto the page. You get a shareable URL — no login needed for your team." },
+    { title:"1. Host this file", body:"Deploy this HTML file to any static host (GitHub Pages, Cloudflare Pages). Share the URL with your team — no login required." },
     { title:"2. Add to iPhone home screen", body:"Open in Safari → Share → Add to Home Screen. Works like a native app." },
-    { title:"3. Create your Google Sheet", body:"Create a new sheet at sheets.google.com. The script below creates a tab per customer automatically." },
-    { title:"4. Create Apps Script webhook", body:"In your sheet: Extensions → Apps Script. Paste the script, then Deploy → New deployment → Web app → access: Anyone. Copy the URL." },
-    { title:"5. Apps Script code", code:"function doGet(e) {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n\n  if (e.parameter.action === \"getProducts\") {\n    const sheet = ss.getSheetByName(\"Products\");\n    if (!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);\n    const rows = sheet.getDataRange().getValues();\n    const headers = rows[0].map(h => String(h).trim());\n    const products = rows.slice(1).filter(r => r[0]).map(r => {\n      const obj = {};\n      headers.forEach((h, i) => obj[h] = String(r[i]).trim());\n      return obj;\n    });\n    return ContentService.createTextOutput(JSON.stringify(products)).setMimeType(ContentService.MimeType.JSON);\n  }\n\n  if (e.parameter.action === \"getSets\") {\n    const sheet = ss.getSheetByName(\"Sets\");\n    if (!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);\n    const rows = sheet.getDataRange().getValues();\n    const headers = rows[0].map(h => String(h).trim());\n    const sets = rows.slice(1).filter(r => r[0]).map(r => {\n      const obj = {};\n      headers.forEach((h, i) => obj[h] = String(r[i]).trim());\n      return obj;\n    });\n    return ContentService.createTextOutput(JSON.stringify(sets)).setMimeType(ContentService.MimeType.JSON);\n  }\n\n  return ContentService.createTextOutput(\"OK\");\n}\nfunction doPost(e) {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  const data = JSON.parse(e.postData.contents);\n  let sheet = ss.getSheetByName(data.customer);\n  if (!sheet) {\n    sheet = ss.insertSheet(data.customer);\n    sheet.appendRow([\"Timestamp\",\"Customer\",\"PO\",\"Sales Rep\",\"Price Tier\",\"Group\",\"Motion Type\",\"Item\",\"Fabric\",\"Leg Finish\",\"Qty\",\"Unit Price\",\"Line Total\",\"Item Notes\",\"Cashback\",\"Order Notes\"]);\n    sheet.setFrozenRows(1);\n  }\n\n  // Sort items by setId numerically/alphabetically so groups are together\n  const sorted = (data.items||[]).slice().sort((a,b) => {\n    const ga = String(a.setId||\"zzz\").toLowerCase();\n    const gb = String(b.setId||\"zzz\").toLowerCase();\n    return ga < gb ? -1 : ga > gb ? 1 : 0;\n  });\n\n  const ts = new Date(data.timestamp).toLocaleString();\n  const tier = data.priceTier || \"REG\";\n  const orderNotes = data.notes || \"\";\n\n  // Build cashback lookup by setId\n  const cashbackBySet = {};\n  (data.cashbackLines||[]).forEach(l => { cashbackBySet[l.setName] = \"-$\"+Number(l.amount).toFixed(2); });\n\n  // Write one row per item\n  sorted.forEach((item, idx) => {\n    const lineTotal = (Number(item.price)||0) * (Number(item.qty)||0);\n    const cbDetail = cashbackBySet[item.setId] || \"\";\n    sheet.appendRow([\n      idx === 0 ? ts : \"\",                          // Timestamp only on first row\n      idx === 0 ? data.customer : \"\",               // Customer only on first row\n      idx === 0 ? (data.po||\"\") : \"\",               // PO only on first row\n      idx === 0 ? (data.salesRep||\"\") : \"\",         // Sales rep only on first row\n      idx === 0 ? tier : \"\",                        // Tier only on first row\n      item.setId || \"\",                             // Group / setId\n      item.motionType||\"\",                          // Motion type\n      item.name,                                    // Item name\n      item.fabric||\"\",                              // Fabric\n      item.legFinish||\"\",                           // Leg finish\n      item.qty,                                     // Qty\n      \"$\"+Number(item.price).toFixed(2),            // Unit price\n      \"$\"+lineTotal.toFixed(2),                     // Line total\n      item.itemNote || \"\",                          // Item notes\n      \"\",                                           // Cashback (filled on summary row)\n      idx === 0 ? orderNotes : \"\"                   // Order notes only on first row\n    ]);\n  });\n\n  // Extra items rows\n  const extraItems = data.extraItems || [];\n  extraItems.forEach(item => {\n    const basePrice = Number(item.price||0);\n    const surcharge = basePrice * 1.115;\n    sheet.appendRow([\"\",\"\",\"\",\"\",\"\",\"EXTRA\",\"\",item.name||\"(unnamed)\",item.fabric||\"\",item.legFinish||\"\",\"\",\n      \"$\"+basePrice.toFixed(2)+\" / $\"+surcharge.toFixed(2)+\" w/surcharge\",\"\",\"\",\"\"]);\n  });\n  const extraTotal = extraItems.reduce((s,e)=>s+Number(e.price||0),0);\n\n  // Summary row\n  const subtotal = sorted.reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||0),0) + extraTotal;\n  const cashbackDetail = (data.cashbackLines||[]).map(l => l.setName+\" (\"+l.count+\" items): -$\"+Number(l.amount).toFixed(2)).join(\" | \");\n  sheet.appendRow([\n    \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"TOTAL\", \"\", \"\", \"\", \"\",\n    \"$\"+subtotal.toFixed(2),\n    \"\",\n    cashbackDetail || \"\",\n    \"\"\n  ]);\n\n  // Blank separator row between orders\n  sheet.appendRow([\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"]);\n\n  // ── Master log: mirrors customer tab detail, all customers stacked together ──\n  let master = ss.getSheetByName(\"Master Log\");\n  if (!master) {\n    master = ss.insertSheet(\"Master Log\", 0); // insert as first tab\n    master.appendRow([\"Timestamp\",\"Customer\",\"PO\",\"Sales Rep\",\"Price Tier\",\"Group\",\"Motion Type\",\"Item\",\"Fabric\",\"Leg Finish\",\"Qty\",\"Unit Price\",\"Line Total\",\"Item Notes\",\"Cashback\",\"Order Notes\"]);\n    master.setFrozenRows(1);\n  }\n\n  // Header row for this customer's order\n  master.appendRow([ts, \"— \"+data.customer+(data.po?\" (PO: \"+data.po+\")\":\"\")+(data.salesRep?\" — Rep: \"+data.salesRep:\"\")+\" —\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"]);\n\n  // One row per item, same sorted order as the customer tab\n  sorted.forEach((item) => {\n    const lineTotal = (Number(item.price)||0) * (Number(item.qty)||0);\n    master.appendRow([\n      \"\", \"\", \"\", \"\", tier, item.setId||\"\", item.motionType||\"\", item.name,\n      item.fabric||\"\", item.legFinish||\"\",\n      item.qty, \"$\"+Number(item.price).toFixed(2), \"$\"+lineTotal.toFixed(2),\n      item.itemNote||\"\", \"\", \"\"\n    ]);\n  });\n\n  // Extra item rows\n  extraItems.forEach(item => {\n    const basePrice = Number(item.price||0);\n    const surcharge = basePrice * 1.115;\n    master.appendRow([\"\",\"\",\"\",\"\",\"\",\"EXTRA\",\"\",item.name||\"(unnamed)\",item.fabric||\"\",item.legFinish||\"\",\"\",\n      \"$\"+basePrice.toFixed(2)+\" / $\"+surcharge.toFixed(2)+\" w/surcharge\",\"\",\"\",\"\"]);\n  });\n\n  // Order summary row\n  master.appendRow([\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"TOTAL\",\"\",\"\",\"\",\"\",\"$\"+subtotal.toFixed(2),\"\",cashbackDetail||\"\"]);\n  if (orderNotes) master.appendRow([\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"Notes:\",orderNotes,\"\",\"\",\"\",\"\",\"\",\"\",\"\"]);\n\n  // Blank separator before next customer\n  master.appendRow([\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"]);\n\n  return ContentService.createTextOutput(JSON.stringify({status:\"ok\"})).setMimeType(ContentService.MimeType.JSON);\n"} },
-    { title:"6. Paste webhook URL & set your name", body:"In Orders tab → ⚙ Config → paste your Apps Script URL, notification email, and your Sales Rep name. The rep name is saved on this device and applied to every order automatically — no need to re-enter it." },
-    { title:"7. Set up product catalog sync", body:"Add a sheet tab named 'Products' with columns: id, name, sku, priceReg, pricePfd, priceUber, fabric, setId. Then paste the SAME Apps Script URL into the Catalog sync URL field in ⚙ Config. Tap 'Sync now' in the Admin tab to pull the latest products on any device." },
-    { title:"8. Catalog sheet columns", code:"id | name | sku | priceReg | pricePfd | priceUber | fabric | setId
-A001 | Widget A | SKU-001 | 12.99 | 10.99 | 8.99 | 100% Cotton | SET1" },
-    { title:"7. Camera permission on iPhone", body:"When scanning first time Safari asks for camera access — tap Allow. If denied: Settings → Safari → Camera → Allow." },
+    { title:"3. Google Sheets webhook", body:"In your Google Sheet: Extensions → Apps Script. Add doGet and doPost functions. Deploy as Web App with Anyone access. Paste the URL in Config." },
+    { title:"4. Product catalog sync", body:"Add a Products sheet tab with columns: id, name, sku, priceReg, pricePfd, priceUber, fabric, legFinish, setId. Add a Sets tab with: id, name, cashback2, cashback3, motionType. Tap Sync in Admin to load." },
+    { title:"5. Config settings", body:"In Orders tab → tap Config (top right): paste your Apps Script webhook URL, add notification emails, enter your Sales Rep name, and paste the catalog sync URL." },
+    { title:"6. Camera permission", body:"When scanning first time, Safari asks for camera access — tap Allow. If denied: iPhone Settings → Safari → Camera → Allow." },
   ];
   return h("div", { style:{paddingTop:16} },
     h("h2", { style:{fontSize:16,fontWeight:500,marginBottom:14} }, "Setup guide"),
@@ -3979,19 +3965,15 @@ A001 | Widget A | SKU-001 | 12.99 | 10.99 | 8.99 | 100% Cotton | SET1" },
       ...steps.map((s,i) =>
         h("div", { key:i, className:"card" },
           h("p", { style:{fontWeight:500,fontSize:14,marginBottom:4} }, s.title),
-          s.body && h("p", { className:"muted", style:{fontSize:13,lineHeight:1.6} }, s.body),
-          s.code && h("pre", null, s.code)
+          h("p", { className:"muted", style:{fontSize:13,lineHeight:1.6} }, s.body)
         )
       )
     )
   );
 }
-
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   if (window.__clearEarly) window.__clearEarly();
-  // Show we got into App
-  try { document.getElementById('root').innerHTML = '<p style="padding:20px;font-family:sans-serif;color:green">App function running...</p>'; } catch(e) {}
   const saved = load();
   const [mainTab, setMainTab] = useState("Orders");
   const [products, setProducts] = useState(saved.products || DEFAULT_PRODUCTS);
@@ -4140,6 +4122,7 @@ try {
     '<p style="margin-top:12px"><button onclick="localStorage.clear();location.reload()" style="padding:8px 16px;background:#0071e3;color:white;border:none;border-radius:8px;cursor:pointer">Clear data &amp; reload</button></p>' +
     '</div>';
 }
+
 
 
 
