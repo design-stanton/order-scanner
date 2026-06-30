@@ -3538,9 +3538,9 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) 
       h("div", null,
         h("p", { style:{fontWeight:600,fontSize:17} }, "Confirm order"),
         h("div", { style:{display:"flex",gap:6,marginTop:4} },
-          h("span", { style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,
-            background:tier==="REG"?"#4caf7d":tier==="PFD"?"#5bb8f5":"#9b7fd4",color:"#fff"} }, tier),
-          mcMode && h("span", { style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"#f0b429",color:"#fff"} }, "Cashback")
+          h("span", { style:{width:14,height:14,borderRadius:"50%",display:"inline-block",
+            background:tier==="REG"?"#4caf7d":tier==="PFD"?"#5bb8f5":"#9b7fd4"} }),
+          mcMode && h("span", { style:{width:14,height:14,borderRadius:"50%",display:"inline-block",background:"#f0b429",marginLeft:4} })
         )
       ),
       h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:()=>setConfirming(false) }, "← Edit order")
@@ -3623,9 +3623,9 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) 
         h("p", { style:{fontWeight:500,fontSize:15} }, customer.name),
         h("div", { style:{display:"flex",alignItems:"center",gap:6} },
           h("p", { className:"muted", style:{fontSize:12} }, "Customer order"+(po?" · PO: "+po:"")+(salesRep?" · Rep: "+salesRep:"")),
-          h("span", { style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,
-            background:tier==="REG"?"#4caf7d":tier==="PFD"?"#5bb8f5":"#9b7fd4",color:"#fff"} }, tier),
-          mcMode && h("span", { style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"#f0b429",color:"#fff"} }, "Cashback")
+          h("span", { style:{width:14,height:14,borderRadius:"50%",display:"inline-block",
+            background:tier==="REG"?"#4caf7d":tier==="PFD"?"#5bb8f5":"#9b7fd4"} }),
+          mcMode && h("span", { style:{width:14,height:14,borderRadius:"50%",display:"inline-block",background:"#f0b429",marginLeft:4} })
         )
       ),
       h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:onClose }, "Close tab")
