@@ -3990,6 +3990,8 @@ A001 | Widget A | SKU-001 | 12.99 | 10.99 | 8.99 | 100% Cotton | SET1" },
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   if (window.__clearEarly) window.__clearEarly();
+  // Show we got into App
+  try { document.getElementById('root').innerHTML = '<p style="padding:20px;font-family:sans-serif;color:green">App function running...</p>'; } catch(e) {}
   const saved = load();
   const [mainTab, setMainTab] = useState("Orders");
   const [products, setProducts] = useState(saved.products || DEFAULT_PRODUCTS);
