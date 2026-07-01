@@ -3398,7 +3398,7 @@ function BarcodeScanner({ onDetected }) {
 }
 
 // ── Customer Order ───────────────────────────────────────────────────────────
-function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) {
+function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChange, config }) {
   const tier = (customer && customer.priceTier) || "REG";
   const mcMode = !!(customer && customer.mcMode);
   const po = (customer && customer.po) || "";
@@ -3406,17 +3406,22 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) 
   const safeSets = Array.isArray(sets) ? sets : [];
   const safeProducts = Array.isArray(products) ? products : [];
 
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(customer.savedCart || []);
   const [manual, setManual] = useState("");
   const [msg, setMsg] = useState(null);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(customer.savedNotes || "");
   const [submitted, setSubmitted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pendingScan, setPendingScan] = useState(null);
-  const [itemNotes, setItemNotes] = useState({}); // keyed by item.id
-  const [extraItems, setExtraItems] = useState([]);
+  const [itemNotes, setItemNotes] = useState(customer.savedItemNotes || {});
+  const [extraItems, setExtraItems] = useState(customer.savedExtraItems || []);
   const wrapRef = useRef(null);
+
+  // Persist cart state back to parent so it survives tab switches
+  useEffect(() => {
+    if (onCartChange) onCartChange(customer.id, { cart, notes, itemNotes, extraItems });
+  }, [cart, notes, itemNotes, extraItems]);
 
   function priceForTier(p) {
     try {
@@ -4014,6 +4019,16 @@ function App() {
     setActiveId(rem.length ? rem[rem.length-1].id : null);
   }
 
+  function handleCartChange(id, data) {
+    setCustomers(cs => cs.map(c => c.id===id ? {
+      ...c,
+      savedCart: data.cart,
+      savedNotes: data.notes,
+      savedItemNotes: data.itemNotes,
+      savedExtraItems: data.extraItems
+    } : c));
+  }
+
   const active = customers.find(c=>c.id===activeId);
 
   return h("div", null,
@@ -4102,6 +4117,7 @@ function App() {
         active
           ? h(CustomerOrder, { key:active.id, customer:active, products, sets, config,
               onClose:()=>closeCustomer(active.id),
+              onCartChange:handleCartChange,
               onSubmit:(id)=>setCustomers(cs=>cs.map(c=>c.id===id?{...c,done:true}:c)) })
           : h("div", { style:{padding:"48px 0",textAlign:"center"} },
               h("p", { className:"muted", style:{fontSize:14} }, "Enter a customer name above to start an order.")
