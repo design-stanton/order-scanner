@@ -13649,7 +13649,7 @@ function BarcodeScanner({ onDetected, paused }) {
 }
 
 // ── Customer Order ───────────────────────────────────────────────────────────
-function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChange, config }) {
+function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChange, onToggleMc, config }) {
   const tier = (customer && customer.priceTier) || "REG";
   const mcMode = !!(customer && customer.mcMode);
   const po = (customer && customer.po) || "";
@@ -13666,6 +13666,7 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
   const [submitting, setSubmitting] = useState(false);
   const [pendingScan, setPendingScan] = useState(null);
   const [pendingGroupScan, setPendingGroupScan] = useState(null); // {set, items}
+  const [showMcToggle, setShowMcToggle] = useState(false);
   const [itemNotes, setItemNotes] = useState(customer.savedItemNotes || {});
   const [extraItems, setExtraItems] = useState(customer.savedExtraItems || []);
   const wrapRef = useRef(null);
@@ -13926,14 +13927,32 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
         h("p", { style:{fontWeight:500,fontSize:15} }, customer.name),
         h("div", { style:{display:"flex",alignItems:"center",gap:6} },
           h("p", { className:"muted", style:{fontSize:12} }, "Customer order"+(po?" · PO: "+po:"")+(salesRep?" · Rep: "+salesRep:"")),
-          h("span", { style:{width:14,height:14,borderRadius:"50%",display:"inline-block",
-            background:tier==="REG"?"#4caf7d":tier==="PFD"?"#5bb8f5":"#9b7fd4"} }),
-          mcMode && h("span", { style:{width:14,height:14,borderRadius:"50%",display:"inline-block",background:"#f0b429",marginLeft:4} })
+          h("span", {
+            style:{width:14,height:14,borderRadius:"50%",display:"inline-block",cursor:"pointer",
+              background:tier==="REG"?"#4caf7d":tier==="PFD"?"#5bb8f5":"#9b7fd4"},
+            onClick:()=>setShowMcToggle(v=>!v)
+          }),
+          mcMode && h("span", {
+            style:{width:14,height:14,borderRadius:"50%",display:"inline-block",background:"#f0b429",marginLeft:4,cursor:"pointer"},
+            onClick:()=>setShowMcToggle(v=>!v)
+          })
         )
       ),
       h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:onClose }, "Close tab")
     ),
 
+    showMcToggle && h("div", { style:{background:"#fff8e1",border:"1px solid #f0b429",borderRadius:10,
+      padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"} },
+      h("p", { style:{fontSize:13,fontWeight:500,color:"#b45309"} }, "Cashback mode: "+(mcMode?"ON":"OFF")),
+      h("div", { style:{display:"flex",gap:8,alignItems:"center"} },
+        h("button", { style:{fontSize:12,padding:"5px 12px",
+          background:mcMode?"#f5f5f7":"#f0b429",borderColor:mcMode?"#e5e5ea":"#f0b429",
+          color:mcMode?"#1d1d1f":"#fff",fontWeight:500},
+          onClick:()=>{ if(onToggleMc) onToggleMc(customer.id); setShowMcToggle(false); }
+        }, mcMode ? "Turn OFF" : "Turn ON"),
+        h("button", { style:{fontSize:12,padding:"5px 10px",color:"#6e6e73"}, onClick:()=>setShowMcToggle(false) }, "✕")
+      )
+    ),
     h(BarcodeScanner, { onDetected: lookup, paused: !!pendingScan || !!pendingGroupScan }),
 
     pendingScan && h(ScanConfirmBanner, { product:pendingScan, tier, mcMode, onConfirm:confirmAdd, onCancel:cancelScan }),
@@ -14346,13 +14365,17 @@ function App() {
     } : c));
   }
 
+  function handleToggleMc(id) {
+    setCustomers(cs => cs.map(c => c.id===id ? { ...c, mcMode: !c.mcMode } : c));
+  }
+
   const active = customers.find(c=>c.id===activeId);
 
   return h("div", null,
     h("div", { style:{padding:"16px 16px 0",background:"#fff",borderBottom:"1px solid #e5e5ea",position:"sticky",top:0,zIndex:10} },
       h("div", { style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12} },
         h("h1", { style:{fontSize:18,fontWeight:600} }, "Order Scanner"),
-        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.7"),
+        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.8"),
         mainTab==="Orders" && h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:()=>setShowConfig(s=>!s) }, "⚙ Config")
       ),
       showConfig && mainTab==="Orders" && h("div", { style:{background:"#f5f5f7",borderRadius:8,padding:12,marginBottom:12,display:"flex",flexDirection:"column",gap:8} },
@@ -14436,6 +14459,7 @@ function App() {
           ? h(CustomerOrder, { key:active.id, customer:active, products, sets, config,
               onClose:()=>closeCustomer(active.id),
               onCartChange:handleCartChange,
+              onToggleMc:handleToggleMc,
               onSubmit:(id)=>setCustomers(cs=>cs.map(c=>c.id===id?{...c,done:true}:c)) })
           : h("div", { style:{padding:"48px 0",textAlign:"center"} },
               h("p", { className:"muted", style:{fontSize:14} }, "Enter a customer name above to start an order.")
