@@ -3651,25 +3651,27 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) 
       ? h("p", { className:"muted", style:{fontSize:13,marginBottom:12} }, "No items yet — scan or type a barcode above.")
       : h("div", { style:{display:"flex",flexDirection:"column",gap:6,marginBottom:12} },
           ...cart.map(item =>
-            h("div", { key:item.id, className:"card", style:{display:"flex",alignItems:"center",justifyContent:"space-between"} },
-              h("div", null,
-                h("p", { style:{fontWeight:500,fontSize:14,marginBottom:2} }, (mcMode?"mc_":"")+item.name),
-                h("p", { className:"muted", style:{fontSize:12} }, "$"+(item.price||0).toFixed(2)+" ea · $"+((item.price||0)*(item.qty||0)).toFixed(2)),
-                item.fabric ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, item.fabric) : null,
-                item.legFinish ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, "Leg: "+item.legFinish) : null
+            h("div", { key:item.id, className:"card", style:{display:"flex",flexDirection:"column",gap:6} },
+              h("div", { style:{display:"flex",alignItems:"center",justifyContent:"space-between"} },
+                h("div", null,
+                  h("p", { style:{fontWeight:500,fontSize:14,marginBottom:2} }, (mcMode?"mc_":"")+item.name),
+                  h("p", { className:"muted", style:{fontSize:12} }, "$"+(item.price||0).toFixed(2)+" ea · $"+((item.price||0)*(item.qty||0)).toFixed(2)),
+                  item.fabric ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, item.fabric) : null,
+                  item.legFinish ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, "Leg: "+item.legFinish) : null
+                ),
+                h("div", { style:{display:"flex",alignItems:"center",gap:8} },
+                  h("button", { style:{padding:"4px 12px",fontSize:18}, onClick:()=>updateQty(item.id,-1) }, "−"),
+                  h("span", { style:{minWidth:20,textAlign:"center",fontSize:14,fontWeight:500} }, item.qty),
+                  h("button", { style:{padding:"4px 12px",fontSize:18}, onClick:()=>updateQty(item.id,1) }, "+")
+                )
               ),
-              h("div", { style:{display:"flex",alignItems:"center",gap:8} },
-                h("button", { style:{padding:"4px 12px",fontSize:18}, onClick:()=>updateQty(item.id,-1) }, "−"),
-                h("span", { style:{minWidth:20,textAlign:"center",fontSize:14,fontWeight:500} }, item.qty),
-                h("button", { style:{padding:"4px 12px",fontSize:18}, onClick:()=>updateQty(item.id,1) }, "+")
-              )
-            ),
-            h("textarea", {
-              placeholder:"Item notes (optional)...",
-              value: itemNotes[item.id]||"",
-              onChange: ev => setItemNotes(n=>({...n,[item.id]:ev.target.value})),
-              style:{marginTop:8,minHeight:40,fontSize:12,padding:"6px 10px",color:"#555",borderColor:"#e5e5ea",borderRadius:6}
-            })
+              h("textarea", {
+                placeholder:"Item notes (optional)...",
+                value: itemNotes[item.id]||"",
+                onChange: ev => setItemNotes(n=>({...n,[item.id]:ev.target.value})),
+                style:{marginTop:4,minHeight:40,fontSize:12,padding:"6px 10px",color:"#555",borderColor:"#e5e5ea",borderRadius:6}
+              })
+            )
           ),
           h("div", { style:{borderTop:"1px solid #e5e5ea",paddingTop:10,marginTop:4} },
             h("div", { style:{display:"flex",justifyContent:"space-between",marginBottom:4} },
