@@ -13339,9 +13339,9 @@ const DEFAULT_SETS = [
   { id:"SET1", name:"Starter Set", cashback2:5.00, cashback3:10.00, motionType:"stationary" },
 ];
 const DEFAULT_PRODUCTS = [
-  { id:"A001", name:"Sample Product 1", price:9.99,  priceReg:9.99,  pricePfd:8.99,  priceUber:7.99,  sku:"SPL-001", barcode:"SPL-001", fabric:"100% Cotton",    legFinish:"Espresso",  setId:"SET1" },
-  { id:"A002", name:"Sample Product 2", price:14.99, priceReg:14.99, pricePfd:12.99, priceUber:10.99, sku:"SPL-002", barcode:"SPL-002", fabric:"Polyester Blend", legFinish:"Natural Oak", setId:"SET1" },
-  { id:"A003", name:"Sample Product 3", price:19.99, priceReg:19.99, pricePfd:17.99, priceUber:15.99, sku:"SPL-003", barcode:"SPL-003", fabric:"",               legFinish:"",            setId:"" },
+  { id:"A001", name:"Sample Product 1", price:9.99,  priceReg:9.99,  pricePfd:8.99,  priceUber:7.99,  sku:"SPL-001", barcode:"SPL-001", fabricBody:"100% Cotton", fabricPillow1:"", fabricPillow2:"", fabricPillow3:"", legFinish:"Espresso",  setId:"SET1" },
+  { id:"A002", name:"Sample Product 2", price:14.99, priceReg:14.99, pricePfd:12.99, priceUber:10.99, sku:"SPL-002", barcode:"SPL-002", fabricBody:"Polyester Blend", fabricPillow1:"", fabricPillow2:"", fabricPillow3:"", legFinish:"Natural Oak", setId:"SET1" },
+  { id:"A003", name:"Sample Product 3", price:19.99, priceReg:19.99, pricePfd:17.99, priceUber:15.99, sku:"SPL-003", barcode:"SPL-003", fabricBody:"", fabricPillow1:"", fabricPillow2:"", fabricPillow3:"", legFinish:"", setId:"" },
 ];
 
 // ── QR helpers ───────────────────────────────────────────────────────────────
@@ -13374,7 +13374,10 @@ async function printLabels(products) {
   const labels = products.map(p =>
     '<div class="label"><img src="'+(qrMap[p.id]||'')+'" width="110" height="110"/>' +
     '<div><div class="name">'+p.name+'</div><div class="detail">SKU: '+p.sku+'</div>' +
-    (p.fabric ? '<div class="detail fabric">'+p.fabric+'</div>' : '') +
+    (p.fabricBody ? '<div class="detail fabric">Body: '+p.fabricBody+'</div>' : '') +
+    (p.fabricPillow1 ? '<div class="detail fabric">Pillow 1: '+p.fabricPillow1+'</div>' : '') +
+    (p.fabricPillow2 ? '<div class="detail fabric">Pillow 2: '+p.fabricPillow2+'</div>' : '') +
+    (p.fabricPillow3 ? '<div class="detail fabric">Pillow 3: '+p.fabricPillow3+'</div>' : '') +
     (p.legFinish ? '<div class="detail fabric">Leg: '+p.legFinish+'</div>' : '') +
     '<div class="code">'+p.barcode+'</div></div></div>'
   ).join('');
@@ -13390,10 +13393,14 @@ async function printLabels(products) {
 function ScanConfirmBanner({ product, tier, mcMode, onConfirm, onCancel }) {
   return h("div", { className:"scan-confirm-overlay", onClick:onCancel },
     h("div", { className:"scan-confirm", onClick: ev => ev.stopPropagation() },
-      h("p", { className:"confirm-name" }, (mcMode?"mc_":"")+product.name),
+      h("p", { className:"confirm-name" }, product.name),
+    mcMode && h("p", { style:{fontSize:12,color:"#6e6e73",textAlign:"center",marginBottom:4} }, "Side mark: mc "+String(product.sku||"").slice(0,3)),
       h("p", { className:"confirm-detail" },
         "SKU: "+(product.sku||"") +
-        (product.fabric ? " · "+product.fabric : "") +
+        (product.fabricBody ? " · Body: "+product.fabricBody : "") +
+        (product.fabricPillow1 ? " · P1: "+product.fabricPillow1 : "") +
+        (product.fabricPillow2 ? " · P2: "+product.fabricPillow2 : "") +
+        (product.fabricPillow3 ? " · P3: "+product.fabricPillow3 : "") +
         (product.legFinish ? " · Leg: "+product.legFinish : "") +
         " · $"+(product.price||0).toFixed(2) +
         " ("+(tier||"REG")+" price)"
@@ -13726,7 +13733,7 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
     if (submitting) return;
     if (!cart.length) { flash("Add items first.", false); return; }
     setSubmitting(true);
-    const namedItems = cart.map(i => ({ ...i, name: mcMode ? "mc_"+i.name : i.name, itemNote: itemNotes[i.id]||"" }));
+    const namedItems = cart.map(i => ({ ...i, name: i.name, sideMark: mcMode ? "mc "+String(i.sku||"").slice(0,3) : "", itemNote: itemNotes[i.id]||"" }));
     const order = {
       customer: customer.name, po: po, salesRep: salesRep, priceTier: tier, mcMode: mcMode,
       extraItems: extraItems.filter(e=>e.name||e.price),
@@ -13743,7 +13750,7 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
           ? "\n\nCashback:\n"+cashbackLines.map(l=>"  "+l.setName+" ("+l.count+" items): -$"+l.amount.toFixed(2)).join("\n")+"\nTotal cashback: -$"+totalCashback.toFixed(2)
           : "";
         const sub  = encodeURIComponent("New order — "+customer.name+(po?" (PO: "+po+")":""));
-        const body = encodeURIComponent("Customer: "+customer.name+"\n"+(po?"PO: "+po+"\n":"")+(salesRep?"Sales Rep: "+salesRep+"\n":"")+"Date: "+new Date().toLocaleString()+"\nTier: "+tier+"\n\nItems:\n"+cart.map(i=>"  "+i.name+(i.fabric?" ["+i.fabric+"]":"")+(i.legFinish?" [Leg: "+i.legFinish+"]":"")+" x"+i.qty+"  $"+(i.price*i.qty).toFixed(2)+(itemNotes[i.id]?"\n    Note: "+itemNotes[i.id]:"")).join("\n")+"\n\nSubtotal: $"+subtotal.toFixed(2)+(extraItems.filter(e=>e.name||e.price).length>0?"\nExtra items:\n"+extraItems.filter(e=>e.name||e.price).map(e=>"  "+(e.name||"(unnamed)")+(e.fabric?" ["+e.fabric+"]":"")+": $"+Number(e.price||0).toFixed(2)+(Number(e.price||0)>0?" (w/ 11.5% surcharge: $"+(Number(e.price||0)*1.115).toFixed(2)+")":"")).join("\n"):"")+cbStr+(notes?"\n\nNotes: "+notes:""));
+        const body = encodeURIComponent("Customer: "+customer.name+"\n"+(po?"PO: "+po+"\n":"")+(salesRep?"Sales Rep: "+salesRep+"\n":"")+"Date: "+new Date().toLocaleString()+"\nTier: "+tier+"\n\nItems:\n"+cart.map(i=>"  "+i.name+(i.fabricBody?" [Body: "+i.fabricBody+"]":"")+(i.fabricPillow1?" [P1: "+i.fabricPillow1+"]":"")+(i.fabricPillow2?" [P2: "+i.fabricPillow2+"]":"")+(i.fabricPillow3?" [P3: "+i.fabricPillow3+"]":"")+(i.legFinish?" [Leg: "+i.legFinish+"]":"")+" x"+i.qty+"  $"+(i.price*i.qty).toFixed(2)+(mcMode?"\n    Side mark: mc "+String(i.sku||"").slice(0,3):"")+(itemNotes[i.id]?"\n    Note: "+itemNotes[i.id]:"")).join("\n")+"\n\nSubtotal: $"+subtotal.toFixed(2)+(extraItems.filter(e=>e.name||e.price).length>0?"\nExtra items:\n"+extraItems.filter(e=>e.name||e.price).map(e=>"  "+(e.name||"(unnamed)")+(e.fabric?" ["+e.fabric+"]":"")+": $"+Number(e.price||0).toFixed(2)+(Number(e.price||0)>0?" (w/ 11.5% surcharge: $"+(Number(e.price||0)*1.115).toFixed(2)+")":"")).join("\n"):"")+cbStr+(notes?"\n\nNotes: "+notes:""));
         window.open("mailto:"+recipients.join(",")+"?subject="+sub+"&body="+body);
       }
     }
@@ -13786,8 +13793,10 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
       ...cart.map(item =>
         h("div", { key:item.id, style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid #f0f0f0"} },
           h("div", null,
-            h("p", { style:{fontWeight:500,fontSize:14} }, (mcMode?"mc_":"")+item.name),
-            item.fabric && h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, item.fabric),
+            h("p", { style:{fontWeight:500,fontSize:14} }, item.name),
+            mcMode && h("p", { style:{fontSize:11,color:"#6e6e73"} }, "Side mark: mc "+String(item.sku||"").slice(0,3)),
+            (item.fabricBody||item.fabricPillow1) && h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} },
+              [item.fabricBody?"Body: "+item.fabricBody:"", item.fabricPillow1?"P1: "+item.fabricPillow1:"", item.fabricPillow2?"P2: "+item.fabricPillow2:"", item.fabricPillow3?"P3: "+item.fabricPillow3:""].filter(Boolean).join(" | ")),
             item.legFinish && h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, "Leg: "+item.legFinish),
             h("p", { className:"muted", style:{fontSize:12} }, item.qty+" × $"+(item.price||0).toFixed(2)),
             itemNotes && itemNotes[item.id] && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginTop:2} }, "Note: "+itemNotes[item.id])
@@ -13881,9 +13890,11 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
             h("div", { key:item.id, className:"card", style:{display:"flex",flexDirection:"column",gap:6} },
               h("div", { style:{display:"flex",alignItems:"center",justifyContent:"space-between"} },
                 h("div", null,
-                  h("p", { style:{fontWeight:500,fontSize:14,marginBottom:2} }, (mcMode?"mc_":"")+item.name),
+                  h("p", { style:{fontWeight:500,fontSize:14,marginBottom:2} }, item.name),
+                item.sideMark && h("p", { style:{fontSize:11,color:"#6e6e73"} }, "Side mark: "+item.sideMark),
                   h("p", { className:"muted", style:{fontSize:12} }, "$"+(item.price||0).toFixed(2)+" ea · $"+((item.price||0)*(item.qty||0)).toFixed(2)),
-                  item.fabric ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, item.fabric) : null,
+                  (item.fabricBody||item.fabricPillow1) ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} },
+                    [item.fabricBody?"Body: "+item.fabricBody:"",item.fabricPillow1?"P1: "+item.fabricPillow1:"",item.fabricPillow2?"P2: "+item.fabricPillow2:"",item.fabricPillow3?"P3: "+item.fabricPillow3:""].filter(Boolean).join(" | ")) : null,
                   item.legFinish ? h("p", { style:{fontSize:11,color:"#888",fontStyle:"italic"} }, "Leg: "+item.legFinish) : null
                 ),
                 h("div", { style:{display:"flex",alignItems:"center",gap:8} },
@@ -13990,9 +14001,12 @@ function AdminPanel({ products, setProducts, sets, setSets, onSave, onSaveSets, 
         pricePfd: parseFloat(p.pricePfd||p.PFD||p.pfd||0)||0,
         priceUber:parseFloat(p.priceUber||p.UBER||p.uber||0)||0,
         price:    parseFloat(p.priceReg||p.REG||p.reg||0)||0,
-        fabric:   String(p.fabric||p.Fabric||"").trim(),
-        legFinish:String(p.legFinish||p.LegFinish||p.leg_finish||p["Leg Finish"]||"").trim(),
-        setId:    String(p.setId||p.SetId||p.set||p.Set||"").trim(),
+        fabricBody:    String(p.fabricBody||p.FabricBody||p["Body Fabric"]||p.fabric||p.Fabric||"").trim(),
+        fabricPillow1: String(p.fabricPillow1||p.FabricPillow1||p["Pillow Fabric 1"]||"").trim(),
+        fabricPillow2: String(p.fabricPillow2||p.FabricPillow2||p["Pillow Fabric 2"]||"").trim(),
+        fabricPillow3: String(p.fabricPillow3||p.FabricPillow3||p["Pillow Fabric 3"]||"").trim(),
+        legFinish:     String(p.legFinish||p.LegFinish||p.leg_finish||p["Leg Finish"]||"").trim(),
+        setId:         String(p.setId||p.SetId||p.set||p.Set||"").trim(),
       })).filter(p => p.name && p.sku);
 
       // Sync sets
@@ -14158,8 +14172,11 @@ function AdminPanel({ products, setProducts, sets, setSets, onSave, onSaveSets, 
             h("div", { style:{flex:1,minWidth:0} },
               h("p", { style:{fontWeight:500,fontSize:14,marginBottom:3} }, p.name),
               h("p", { className:"muted", style:{fontSize:12,marginBottom:2} }, "SKU: "+p.sku+(p.setId?" · Set: "+(sets.find(s=>s.id===p.setId)||{}).name:"")),
-              p.fabric && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:2} }, p.fabric),
-              p.legFinish && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:2} }, "Leg: "+p.legFinish),
+              p.fabricBody    && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:1} }, "Body: "+p.fabricBody),
+              p.fabricPillow1 && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:1} }, "Pillow 1: "+p.fabricPillow1),
+              p.fabricPillow2 && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:1} }, "Pillow 2: "+p.fabricPillow2),
+              p.fabricPillow3 && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:2} }, "Pillow 3: "+p.fabricPillow3),
+              p.legFinish     && h("p", { style:{fontSize:12,color:"#555",fontStyle:"italic",marginBottom:2} }, "Leg: "+p.legFinish),
               h("div", { style:{display:"flex",gap:10,marginBottom:8,flexWrap:"wrap"} },
                 h("span", { style:{fontSize:12,fontWeight:500} }, "REG: $"+(p.priceReg||p.price||0).toFixed(2)),
                 h("span", { style:{fontSize:12,color:"#0071e3",fontWeight:500} }, "PFD: $"+(p.pricePfd||p.price||0).toFixed(2)),
@@ -14254,7 +14271,7 @@ function App() {
     h("div", { style:{padding:"16px 16px 0",background:"#fff",borderBottom:"1px solid #e5e5ea",position:"sticky",top:0,zIndex:10} },
       h("div", { style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12} },
         h("h1", { style:{fontSize:18,fontWeight:600} }, "Order Scanner"),
-        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.3"),
+        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.5"),
         mainTab==="Orders" && h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:()=>setShowConfig(s=>!s) }, "⚙ Config")
       ),
       showConfig && mainTab==="Orders" && h("div", { style:{background:"#f5f5f7",borderRadius:8,padding:12,marginBottom:12,display:"flex",flexDirection:"column",gap:8} },
@@ -14355,11 +14372,6 @@ try {
     '<h3 style="color:#c62828">Error: ' + e.message + '</h3>' +
     '<p style="margin-top:12px"><button onclick="localStorage.clear();location.reload()" style="padding:8px 16px;background:#0071e3;color:white;border:none;border-radius:8px;cursor:pointer">Clear data &amp; reload</button></p>' +
     '</div>';
-}
-
-
-
-
-</script>
+}</script>
 </body>
 </html>
