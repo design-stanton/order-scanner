@@ -3572,15 +3572,15 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) 
 
     extraItems.filter(e=>e.name||e.price).length > 0 && h("div", { style:{marginBottom:12} },
       h("p", { style:{fontWeight:500,fontSize:14,marginBottom:6} }, "Extra items"),
-      ...extraItems.filter(e=>e.name||e.price).map((item,i) =>
+      ...extraItems.filter(e=>e.name||e.price).map((ei,i) =>
         h("div", { key:i, style:{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #f0f0f0"} },
           h("div", null,
-            h("p", { style:{fontSize:14} }, item.name||"(unnamed)"),
-            item.fabric && h("p", { style:{fontSize:12,color:"#6e6e73",fontStyle:"italic"} }, item.fabric)
+            h("p", { style:{fontSize:14} }, ei.name||"(unnamed)"),
+            ei.fabric && h("p", { style:{fontSize:12,color:"#6e6e73",fontStyle:"italic"} }, ei.fabric)
           ),
           h("div", { style:{textAlign:"right"} },
-            h("p", { style:{fontSize:14,fontWeight:500} }, "$"+Number(item.price||0).toFixed(2)),
-            Number(item.price||0) > 0 && h("p", { style:{fontSize:11,color:"#6e6e73"} }, "w/ surcharge: $"+(Number(item.price||0)*1.115).toFixed(2))
+            h("p", { style:{fontSize:14,fontWeight:500} }, "$"+Number(ei.price||0).toFixed(2)),
+            Number(ei.price||0) > 0 && h("p", { style:{fontSize:11,color:"#6e6e73"} }, "w/ surcharge: $"+(Number(ei.price||0)*1.115).toFixed(2))
           )
         )
       )
@@ -3697,23 +3697,23 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, config }) 
       extraItems.length === 0
         ? h("p", { className:"muted", style:{fontSize:12} }, "Tap '+ Add extra item' to add unlisted products.")
         : h("div", { style:{display:"flex",flexDirection:"column",gap:6} },
-            ...extraItems.map((item,idx) =>
-              h("div", { key:item.id, style:{display:"flex",gap:6,alignItems:"center"} },
+            ...extraItems.map((ei,eidx) =>
+              h("div", { key:ei.id, style:{display:"flex",gap:6,alignItems:"center"} },
                 h("div", { style:{flex:1,display:"flex",flexDirection:"column",gap:4} },
-                  h("input", { placeholder:"Item description", value:item.name, style:{fontSize:13},
-                    onChange:ev=>setExtraItems(ei=>ei.map((e,i)=>i===idx?{...e,name:ev.target.value}:e)) }),
-                  h("input", { placeholder:"Fabric (e.g. 100% Cotton)", value:item.fabric||"", style:{fontSize:12},
-                    onChange:ev=>setExtraItems(ei=>ei.map((e,i)=>i===idx?{...e,fabric:ev.target.value}:e)) }),
+                  h("input", { placeholder:"Item description", value:ei.name, style:{fontSize:13},
+                    onChange:ev=>setExtraItems(arr=>arr.map((e,i)=>i===eidx?{...e,name:ev.target.value}:e)) }),
+                  h("input", { placeholder:"Fabric (e.g. 100% Cotton)", value:ei.fabric||"", style:{fontSize:12},
+                    onChange:ev=>setExtraItems(arr=>arr.map((e,i)=>i===eidx?{...e,fabric:ev.target.value}:e)) }),
                   h("div", { style:{display:"flex",gap:6,alignItems:"center"} },
-                    h("input", { placeholder:"Price", value:item.price, type:"number", min:"0", step:"0.01", style:{fontSize:13,flex:1},
-                      onChange:ev=>setExtraItems(ei=>ei.map((e,i)=>i===idx?{...e,price:ev.target.value}:e)) }),
-                    item.price && Number(item.price) > 0 && h("span", { style:{fontSize:12,color:"#6e6e73",whiteSpace:"nowrap",flexShrink:0} },
-                      "Surcharge: $"+(Number(item.price)*1.115).toFixed(2)
+                    h("input", { placeholder:"Price", value:ei.price, type:"number", min:"0", step:"0.01", style:{fontSize:13,flex:1},
+                      onChange:ev=>setExtraItems(arr=>arr.map((e,i)=>i===eidx?{...e,price:ev.target.value}:e)) }),
+                    ei.price && Number(ei.price) > 0 && h("span", { style:{fontSize:12,color:"#6e6e73",whiteSpace:"nowrap",flexShrink:0} },
+                      "Surcharge: $"+(Number(ei.price)*1.115).toFixed(2)
                     )
                   )
                 ),
                 h("button", { style:{padding:"6px 10px",fontSize:14,color:"#ff3b30",flexShrink:0},
-                  onClick:()=>setExtraItems(ei=>ei.filter((_,i)=>i!==idx)) }, "✕")
+                  onClick:()=>setExtraItems(arr=>arr.filter((_,i)=>i!==eidx)) }, "✕")
               )
             )
           )
