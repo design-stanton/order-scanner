@@ -13665,6 +13665,7 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pendingScan, setPendingScan] = useState(null);
+  const [pendingGroupScan, setPendingGroupScan] = useState(null); // {set, items}
   const [itemNotes, setItemNotes] = useState(customer.savedItemNotes || {});
   const [extraItems, setExtraItems] = useState(customer.savedExtraItems || []);
   const wrapRef = useRef(null);
@@ -13692,7 +13693,7 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
   }
 
   function lookup(code) {
-    if (pendingScan) return;
+    if (pendingScan || pendingGroupScan) return;
     try {
       const raw = String(code||"").trim().replace(/^['"]+|['"]+$/g,"");
       if (!raw) return;
@@ -13707,22 +13708,8 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
             flash('No products found in set "'+matchedSet.name+'"', false);
             return;
           }
-          // Add 1 of each item in the set directly (no confirmation popup for group scan)
-          setCart(c => {
-            let updated = [...c];
-            setItems.forEach(product => {
-              const itemSet = safeSets.find(s => s.id === (product.setId||""));
-              const item = { ...product, price: priceForTier(product), setId: product.setId||"", motionType: itemSet ? (itemSet.motionType||"") : "" };
-              const ex = updated.find(i => i.id === item.id);
-              if (ex) {
-                updated = updated.map(i => i.id === item.id ? { ...i, qty: i.qty+1 } : i);
-              } else {
-                updated = [...updated, { ...item, qty: 1 }];
-              }
-            });
-            return updated;
-          });
-          flash("✓ Added "+setItems.length+" items from "+matchedSet.name, true);
+          // Show group confirmation
+          setPendingGroupScan({ set: matchedSet, items: setItems });
           return;
         } else {
           flash('Group not found: "'+setId+'" — try syncing sets.', false);
@@ -13760,6 +13747,26 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
   }
 
   function cancelScan() { setPendingScan(null); }
+
+  function confirmGroup() {
+    if (!pendingGroupScan) return;
+    const { set: matchedSet, items: setItems } = pendingGroupScan;
+    setCart(c => {
+      let updated = [...c];
+      setItems.forEach(product => {
+        const itemSet = safeSets.find(s => s.id === (product.setId||""));
+        const item = { ...product, price: priceForTier(product), setId: product.setId||"", motionType: itemSet ? (itemSet.motionType||"") : "" };
+        const ex = updated.find(i => i.id === item.id);
+        if (ex) updated = updated.map(i => i.id === item.id ? { ...i, qty: i.qty+1 } : i);
+        else updated = [...updated, { ...item, qty: 1 }];
+      });
+      return updated;
+    });
+    flash("✓ Added "+setItems.length+" items from "+matchedSet.name, true);
+    setPendingGroupScan(null);
+  }
+
+  function cancelGroup() { setPendingGroupScan(null); }
 
   function handleManual(ev) {
     ev.preventDefault();
@@ -13927,9 +13934,22 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
       h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:onClose }, "Close tab")
     ),
 
-    h(BarcodeScanner, { onDetected: lookup, paused: !!pendingScan }),
+    h(BarcodeScanner, { onDetected: lookup, paused: !!pendingScan || !!pendingGroupScan }),
 
     pendingScan && h(ScanConfirmBanner, { product:pendingScan, tier, mcMode, onConfirm:confirmAdd, onCancel:cancelScan }),
+    pendingGroupScan && h("div", { className:"scan-confirm" },
+      h("p", { className:"confirm-name" }, "Add full group?"),
+      h("p", { className:"confirm-detail" }, pendingGroupScan.set.name+" — "+pendingGroupScan.items.length+" items will be added (1 of each)"),
+      h("div", { style:{fontSize:12,color:"#6e6e73",marginBottom:12,maxHeight:80,overflowY:"auto"} },
+        ...pendingGroupScan.items.map((item,i) =>
+          h("p", { key:i, style:{margin:"1px 0"} }, "• "+item.name)
+        )
+      ),
+      h("div", { className:"confirm-btns" },
+        h("button", { onClick:cancelGroup, style:{background:"#f5f5f7",borderColor:"#e5e5ea"} }, "✕ Cancel"),
+        h("button", { className:"primary", onClick:confirmGroup }, "✓ Add all "+pendingGroupScan.items.length+" items")
+      )
+    ),
 
     h("form", { onSubmit:handleManual, style:{display:"flex",gap:8,marginBottom:6} },
       h("input", { placeholder:"Or type barcode / SKU manually", value:manual, onChange:ev=>setManual(ev.target.value), style:{flex:1} }),
@@ -14332,7 +14352,7 @@ function App() {
     h("div", { style:{padding:"16px 16px 0",background:"#fff",borderBottom:"1px solid #e5e5ea",position:"sticky",top:0,zIndex:10} },
       h("div", { style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12} },
         h("h1", { style:{fontSize:18,fontWeight:600} }, "Order Scanner"),
-        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.6"),
+        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.7"),
         mainTab==="Orders" && h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:()=>setShowConfig(s=>!s) }, "⚙ Config")
       ),
       showConfig && mainTab==="Orders" && h("div", { style:{background:"#f5f5f7",borderRadius:8,padding:12,marginBottom:12,display:"flex",flexDirection:"column",gap:8} },
