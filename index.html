@@ -13390,6 +13390,32 @@ async function printLabels(products) {
 }
 
 // ── Scan Confirmation Banner ──────────────────────────────────────────────────
+async function printGroupLabels(set, products) {
+  const setProducts = products.filter(p => p.setId === set.id);
+  if (setProducts.length === 0) { alert("No products in this set."); return; }
+  // Encode the group scan code as GROUP:setId
+  const code = "GROUP:" + set.id;
+  const qrUrl = await generateQRDataURL(code);
+  const win = window.open("", "_blank");
+  const itemList = setProducts.map(p => "<li style='font-size:12px'>"+p.name+"</li>").join("");
+  win.document.write("<!DOCTYPE html><html><head><title>Group Label - "+set.name+"</title>"+
+    "<style>body{font-family:-apple-system,sans-serif;padding:24px;text-align:center}"+
+    ".label{display:inline-block;border:2px solid #1d1d1f;border-radius:12px;padding:20px 24px;max-width:300px}"+
+    "h2{font-size:18px;margin-bottom:4px}p{font-size:12px;color:#6e6e73;margin-bottom:12px}"+
+    "ul{text-align:left;margin:8px 0 12px;padding-left:20px}"+
+    ".actions{margin-bottom:20px}.actions button{padding:8px 16px;background:#0071e3;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-right:8px}"+
+    "@media print{.actions{display:none}}</style></head><body>"+
+    "<div class='actions'><button onclick='window.print()'>Print</button><button onclick='window.close()'>Close</button></div>"+
+    "<div class='label'>"+
+    "<h2>"+set.name+"</h2>"+
+    "<p>Scan to add all items</p>"+
+    "<img src='"+qrUrl+"' width='180' height='180'/>"+
+    "<ul>"+itemList+"</ul>"+
+    "<p style='font-size:10px;color:#aaa'>"+code+"</p>"+
+    "</div></body></html>");
+  win.document.close();
+}
+
 function ScanConfirmBanner({ product, tier, mcMode, onConfirm, onCancel }) {
   return h("div", { className:"scan-confirm-overlay", onClick:onCancel },
     h("div", { className:"scan-confirm", onClick: ev => ev.stopPropagation() },
@@ -13666,11 +13692,45 @@ function CustomerOrder({ customer, products, sets, onClose, onSubmit, onCartChan
   }
 
   function lookup(code) {
-    // block new scans while confirmation is showing
     if (pendingScan) return;
     try {
-      const t = String(code||"").trim().replace(/^['"]+|['"]+$/g,"").toUpperCase();
-      if (!t) return;
+      const raw = String(code||"").trim().replace(/^['"]+|['"]+$/g,"");
+      if (!raw) return;
+
+      // Check for group scan code (GROUP:setId)
+      if (raw.toUpperCase().startsWith("GROUP:")) {
+        const setId = raw.slice(6).trim();
+        const matchedSet = safeSets.find(s => s.id === setId || s.id.toUpperCase() === setId.toUpperCase());
+        if (matchedSet) {
+          const setItems = safeProducts.filter(p => (p.setId||"") === matchedSet.id);
+          if (setItems.length === 0) {
+            flash('No products found in set "'+matchedSet.name+'"', false);
+            return;
+          }
+          // Add 1 of each item in the set directly (no confirmation popup for group scan)
+          setCart(c => {
+            let updated = [...c];
+            setItems.forEach(product => {
+              const itemSet = safeSets.find(s => s.id === (product.setId||""));
+              const item = { ...product, price: priceForTier(product), setId: product.setId||"", motionType: itemSet ? (itemSet.motionType||"") : "" };
+              const ex = updated.find(i => i.id === item.id);
+              if (ex) {
+                updated = updated.map(i => i.id === item.id ? { ...i, qty: i.qty+1 } : i);
+              } else {
+                updated = [...updated, { ...item, qty: 1 }];
+              }
+            });
+            return updated;
+          });
+          flash("✓ Added "+setItems.length+" items from "+matchedSet.name, true);
+          return;
+        } else {
+          flash('Group not found: "'+setId+'" — try syncing sets.', false);
+          return;
+        }
+      }
+
+      const t = raw.toUpperCase();
       const found = safeProducts.find(p =>
         String(p.barcode||"").trim().replace(/^['"]+|['"]+$/g,"").toUpperCase() === t ||
         String(p.sku||"").trim().replace(/^['"]+|['"]+$/g,"").toUpperCase() === t ||
@@ -14100,6 +14160,7 @@ function AdminPanel({ products, setProducts, sets, setSets, onSave, onSaveSets, 
                   h("p", { style:{fontSize:12,color:"#6e6e73"} }, "2 items: $"+Number(s.cashback2).toFixed(2)+" · 3 items: $"+Number(s.cashback3).toFixed(2))
                 ),
                 h("div", { style:{display:"flex",gap:6} },
+                  h("button", { className:"sm", onClick:()=>printGroupLabels(s, products) }, "🖨 Group QR"),
                   h("button", { className:"sm", onClick:()=>startEditSet(s) }, "Edit"),
                   h("button", { className:"sm danger", onClick:()=>deleteSet(s.id) }, "Delete")
                 )
@@ -14271,7 +14332,7 @@ function App() {
     h("div", { style:{padding:"16px 16px 0",background:"#fff",borderBottom:"1px solid #e5e5ea",position:"sticky",top:0,zIndex:10} },
       h("div", { style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12} },
         h("h1", { style:{fontSize:18,fontWeight:600} }, "Order Scanner"),
-        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.5"),
+        h("span", { style:{fontSize:11,color:"#c7c7cc",alignSelf:"flex-end",marginLeft:6,marginBottom:2} }, "v1.6"),
         mainTab==="Orders" && h("button", { style:{fontSize:12,color:"#6e6e73"}, onClick:()=>setShowConfig(s=>!s) }, "⚙ Config")
       ),
       showConfig && mainTab==="Orders" && h("div", { style:{background:"#f5f5f7",borderRadius:8,padding:12,marginBottom:12,display:"flex",flexDirection:"column",gap:8} },
