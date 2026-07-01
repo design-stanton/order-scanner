@@ -3314,9 +3314,7 @@ function BarcodeScanner({ onDetected }) {
   const rafRef = useRef(null);
   const mountedRef = useRef(true);
   const canScanRef = useRef(true);
-  const detectorRef = useRef(null);
   const canvasRef = useRef(null);
-  const zxingRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -3327,128 +3325,158 @@ function BarcodeScanner({ onDetected }) {
     setState("loading");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: { ideal: "environment" } }
       });
       if (!mountedRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true);
+        await new Promise(res => { video.onloadedmetadata = res; });
+        await video.play();
       }
-
-      // Try native BarcodeDetector first (iOS 17+, Chrome, Edge)
-      if (window.BarcodeDetector) {
-        try {
-          const formats = await BarcodeDetector.getSupportedFormats();
-          detectorRef.current = new BarcodeDetector({ formats });
-        } catch(e) { detectorRef.current = null; }
-      }
-
-      // Fall back to ZXing canvas-based scanning
-      if (!detectorRef.current && window.ZXing) {
-        try {
-          const hints = new Map();
-          hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-            ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128,
-            ZXing.BarcodeFormat.CODE_39,  ZXing.BarcodeFormat.EAN_13,
-            ZXing.BarcodeFormat.EAN_8,    ZXing.BarcodeFormat.UPC_A,
-            ZXing.BarcodeFormat.DATA_MATRIX,
-          ]);
-          hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-          zxingRef.current = new ZXing.BrowserMultiFormatReader(hints);
-        } catch(e) {}
-      }
-
-      // Create offscreen canvas for frame capture
-      canvasRef.current = document.createElement('canvas');
-
+      canvasRef.current = document.createElement("canvas");
       if (mountedRef.current) setState("scanning");
-      scanFrame();
-
+      tick();
     } catch(err) {
-      if (mountedRef.current) {
-        setState("error");
-        setErrMsg((err.message||"").includes("ermission")
-          ? "Camera permission denied — check Settings → Safari → Camera."
-          : "Camera unavailable. Use manual entry below.");
+      if (!mountedRef.current) return;
+      setState("error");
+      if ((err.name||"").includes("NotAllowed") || (err.message||"").includes("ermission")) {
+        setErrMsg("Camera permission denied. Go to Settings → Safari → Camera → Allow.");
+      } else {
+        setErrMsg("Camera unavailable. Use manual entry below.");
       }
     }
   }
 
-  function scanFrame() {
+  function tick() {
     if (!mountedRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || video.readyState < 2 || !canvas) {
-      rafRef.current = requestAnimationFrame(scanFrame);
+    if (!video || !canvas || video.readyState < 2) {
+      rafRef.current = requestAnimationFrame(tick);
       return;
     }
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-
     if (!canScanRef.current) {
-      rafRef.current = requestAnimationFrame(scanFrame);
+      rafRef.current = requestAnimationFrame(tick);
       return;
     }
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    if (detectorRef.current) {
-      // Native BarcodeDetector path
-      detectorRef.current.detect(canvas).then(results => {
+    // Try native BarcodeDetector (iOS 17+, Chrome Android)
+    if (window.BarcodeDetector) {
+      BarcodeDetector.getSupportedFormats().then(fmts => {
+        const det = new BarcodeDetector({ formats: fmts });
+        return det.detect(canvas);
+      }).then(results => {
         if (results && results.length > 0 && canScanRef.current && mountedRef.current) {
           canScanRef.current = false;
           onDetected(results[0].rawValue);
-          setTimeout(() => { canScanRef.current = true; }, 1500);
+          setTimeout(() => { canScanRef.current = true; }, 2000);
         }
-        if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
+        if (mountedRef.current) rafRef.current = setTimeout(tick, 200);
       }).catch(() => {
-        if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
+        if (mountedRef.current) rafRef.current = setTimeout(tick, 200);
       });
-    } else if (zxingRef.current) {
-      // ZXing canvas path
+      return;
+    }
+
+    // ZXing fallback
+    if (window.ZXing) {
       try {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const luminance = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
-        const binary = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminance));
-        const result = zxingRef.current.decode(binary);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const src = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
+        const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        const reader = new ZXing.MultiFormatReader();
+        reader.setHints(hints);
+        const result = reader.decode(bmp);
         if (result && canScanRef.current && mountedRef.current) {
           canScanRef.current = false;
           onDetected(result.getText());
-          setTimeout(() => { canScanRef.current = true; }, 1500);
+          setTimeout(() => { canScanRef.current = true; }, 2000);
         }
       } catch(e) {}
-      if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
-    } else {
-      if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
     }
+    if (mountedRef.current) rafRef.current = setTimeout(tick, 250);
   }
 
   function stopScanner() {
-    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (rafRef.current) { clearTimeout(rafRef.current); cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
-    detectorRef.current = null;
-    zxingRef.current = null;
     canvasRef.current = null;
     if (mountedRef.current) setState("idle");
   }
 
+  // Also offer a photo picker fallback for stubborn devices
+  function handlePhotoScan(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function() {
+      const c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      if (window.BarcodeDetector) {
+        BarcodeDetector.getSupportedFormats().then(fmts =>
+          new BarcodeDetector({ formats: fmts }).detect(c)
+        ).then(results => {
+          if (results && results.length > 0) onDetected(results[0].rawValue);
+          else setErrMsg("No barcode found in photo. Try again.");
+        }).catch(() => setErrMsg("Could not read photo."));
+      } else if (window.ZXing) {
+        try {
+          const imgData = ctx.getImageData(0,0,c.width,c.height);
+          const src = new ZXing.RGBLuminanceSource(imgData.data, c.width, c.height);
+          const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
+          const reader = new ZXing.MultiFormatReader();
+          const result = reader.decode(bmp);
+          if (result) onDetected(result.getText());
+        } catch(e) { setErrMsg("No barcode found. Try better lighting."); }
+      }
+    };
+    img.src = url;
+    ev.target.value = "";
+  }
+
   return h("div", null,
-    h("button", { style:{width:"100%",marginBottom:10,fontWeight:state==="scanning"?400:500},
-      onClick: state==="scanning" ? stopScanner : startScanner },
-      state==="scanning" ? "⏹ Stop camera" : state==="loading" ? "Starting camera…" : "📷 Scan barcode with camera"
+    h("div", { style:{display:"flex",gap:8,marginBottom:10} },
+      h("button", { style:{flex:1,fontWeight:state==="scanning"?400:500},
+        onClick: state==="scanning" ? stopScanner : startScanner },
+        state==="scanning" ? "⏹ Stop camera" : state==="loading" ? "Starting…" : "📷 Scan with camera"
+      ),
+      h("label", { style:{display:"flex",alignItems:"center",justifyContent:"center",
+        padding:"10px 14px",border:"1px solid #d1d1d6",borderRadius:8,
+        fontSize:14,cursor:"pointer",background:"#fff",whiteSpace:"nowrap"} },
+        "🖼 Photo",
+        h("input", { type:"file", accept:"image/*", capture:"environment",
+          style:{display:"none"}, onChange:handlePhotoScan })
+      )
     ),
-    (state==="scanning"||state==="loading") && h("div", { style:{position:"relative",marginBottom:12,borderRadius:10,overflow:"hidden",background:"#000"} },
+    (state==="scanning"||state==="loading") && h("div", {
+      style:{position:"relative",marginBottom:12,borderRadius:10,overflow:"hidden",background:"#000"} },
       h("video", { ref:videoRef, autoPlay:true, playsInline:true, muted:true,
         style:{width:"100%",display:"block",maxHeight:220,objectFit:"cover"} }),
       state==="scanning" && h("div", { style:{position:"absolute",top:"50%",left:"50%",
         transform:"translate(-50%,-50%)",width:200,height:100,
-        border:"2px solid rgba(255,255,255,0.8)",borderRadius:6,pointerEvents:"none"} })
+        border:"2px solid rgba(255,255,255,0.8)",borderRadius:6,pointerEvents:"none"} }),
+      state==="scanning" && h("p", { style:{position:"absolute",bottom:6,left:0,right:0,
+        textAlign:"center",color:"rgba(255,255,255,0.8)",fontSize:11,margin:0} },
+        "Align barcode in frame")
     ),
-    state==="error" && h("div", { style:{background:"#fff3f3",border:"1px solid #ffcdd2",borderRadius:8,padding:"10px 12px",marginBottom:10} },
+    state==="error" && h("div", { style:{background:"#fff3f3",border:"1px solid #ffcdd2",
+      borderRadius:8,padding:"10px 12px",marginBottom:10} },
       h("p", { style:{fontSize:13,color:"#c62828"} }, errMsg)
-    )
+    ),
+    errMsg && state!=="error" && h("p", { style:{fontSize:13,color:"#c62828",marginBottom:8} }, errMsg)
   );
 }
 
