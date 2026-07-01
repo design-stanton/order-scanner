@@ -3311,9 +3311,12 @@ function BarcodeScanner({ onDetected }) {
   const [errMsg, setErrMsg] = useState("");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const readerRef = useRef(null);
+  const rafRef = useRef(null);
   const mountedRef = useRef(true);
   const canScanRef = useRef(true);
+  const detectorRef = useRef(null);
+  const canvasRef = useRef(null);
+  const zxingRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -3333,35 +3336,34 @@ function BarcodeScanner({ onDetected }) {
         await videoRef.current.play();
       }
 
-      const hints = new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-        ZXing.BarcodeFormat.QR_CODE,
-        ZXing.BarcodeFormat.CODE_128,
-        ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.EAN_13,
-        ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.UPC_A,
-        ZXing.BarcodeFormat.DATA_MATRIX,
-      ]);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-      const reader = new ZXing.BrowserMultiFormatReader(hints, 300);
-      readerRef.current = reader;
+      // Try native BarcodeDetector first (iOS 17+, Chrome, Edge)
+      if (window.BarcodeDetector) {
+        try {
+          const formats = await BarcodeDetector.getSupportedFormats();
+          detectorRef.current = new BarcodeDetector({ formats });
+        } catch(e) { detectorRef.current = null; }
+      }
+
+      // Fall back to ZXing canvas-based scanning
+      if (!detectorRef.current && window.ZXing) {
+        try {
+          const hints = new Map();
+          hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+            ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128,
+            ZXing.BarcodeFormat.CODE_39,  ZXing.BarcodeFormat.EAN_13,
+            ZXing.BarcodeFormat.EAN_8,    ZXing.BarcodeFormat.UPC_A,
+            ZXing.BarcodeFormat.DATA_MATRIX,
+          ]);
+          hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+          zxingRef.current = new ZXing.BrowserMultiFormatReader(hints);
+        } catch(e) {}
+      }
+
+      // Create offscreen canvas for frame capture
+      canvasRef.current = document.createElement('canvas');
 
       if (mountedRef.current) setState("scanning");
-
-      async function scanLoop() {
-        if (!mountedRef.current || !readerRef.current || !videoRef.current) return;
-        try {
-          const result = await readerRef.current.decodeFromVideoElement(videoRef.current);
-          if (result && mountedRef.current && canScanRef.current) {
-            canScanRef.current = false;
-            onDetected(result.getText());
-            setTimeout(() => { canScanRef.current = true; }, 1500);
-          }
-        } catch(e) {}
-        if (mountedRef.current) setTimeout(scanLoop, 200);
-      }
-      scanLoop();
+      scanFrame();
 
     } catch(err) {
       if (mountedRef.current) {
@@ -3373,9 +3375,62 @@ function BarcodeScanner({ onDetected }) {
     }
   }
 
+  function scanFrame() {
+    if (!mountedRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || video.readyState < 2 || !canvas) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    if (!canScanRef.current) {
+      rafRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    if (detectorRef.current) {
+      // Native BarcodeDetector path
+      detectorRef.current.detect(canvas).then(results => {
+        if (results && results.length > 0 && canScanRef.current && mountedRef.current) {
+          canScanRef.current = false;
+          onDetected(results[0].rawValue);
+          setTimeout(() => { canScanRef.current = true; }, 1500);
+        }
+        if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
+      }).catch(() => {
+        if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
+      });
+    } else if (zxingRef.current) {
+      // ZXing canvas path
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const luminance = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
+        const binary = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminance));
+        const result = zxingRef.current.decode(binary);
+        if (result && canScanRef.current && mountedRef.current) {
+          canScanRef.current = false;
+          onDetected(result.getText());
+          setTimeout(() => { canScanRef.current = true; }, 1500);
+        }
+      } catch(e) {}
+      if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
+    } else {
+      if (mountedRef.current) rafRef.current = requestAnimationFrame(scanFrame);
+    }
+  }
+
   function stopScanner() {
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
-    if (readerRef.current) { try { readerRef.current.reset(); } catch(e) {} readerRef.current = null; }
+    detectorRef.current = null;
+    zxingRef.current = null;
+    canvasRef.current = null;
     if (mountedRef.current) setState("idle");
   }
 
